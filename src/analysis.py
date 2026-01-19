@@ -4,26 +4,40 @@ import os
 
 DATA_PATH = "data/sp500_data.csv"
 
+# src/analysis.py
+
 def download_sp500_data(start_date="1950-01-01"):
     """
     Checks if data exists locally. If yes, load it.
-    If no, download from yfinance and save it to CSV.
+    If no, download from yfinance, CLEAN IT, and save it.
     """
-    # Check if the file already exists
     if os.path.exists(DATA_PATH):
         print(f"Loading data from local file: {DATA_PATH}...")
-        # parse_dates tells pandas to treat the 'date' column as actual dates, not strings
-        # index_col=0 sets the first column (date) as the index, which matches yfinance format
         df = pd.read_csv(DATA_PATH, index_col=0, parse_dates=True)
         return df
-    
-    # does not exist -> download the data
-    ticker = "^GSPC"
-    print(f"Downloading data for {ticker}...")
-    df: pd.DataFrame = yf.download(ticker, start=start_date, progress=False)
 
-    # Save the raw data so we don't have to download again
-    # We save it immediately to the data folder
+    # Download fresh data
+    ticker = "^GSPC"
+    print(f"Downloading data for {ticker} from Yahoo Finance...")
+    df = yf.download(ticker, start=start_date, progress=False)
+    
+    # --- CRITICAL FIX START ---
+    # yfinance returns a complex MultiIndex (Price, Ticker). 
+    # We flatten it immediately to just get the 'Close' price.
+    
+    # 1. Select only the "Close" column
+    if "Close" in df.columns:
+        df = df["Close"]
+    
+    # 2. If it's still a DataFrame (e.g. with Ticker columns), take the first column
+    if isinstance(df, pd.DataFrame):
+        df = df.iloc[:, 0]
+        
+    # 3. Give it a clean name
+    df.name = "Close"
+    # --- CRITICAL FIX END ---
+    
+    # Now we save a simple, clean Series to CSV
     df.to_csv(DATA_PATH)
     print(f"Data saved to {DATA_PATH}")
         
@@ -31,13 +45,19 @@ def download_sp500_data(start_date="1950-01-01"):
 
 def clean_sp500_df(df):
     """
-    Clean the df from yfinance up: delete OHLV from OHLCV, i.e. only keep closing price.
-    Resets index: date stops being index, instead regular column.
+    Resets index: date stops being index, instead becomes a regular column.
     """
-    df = df["Close"]  # keep only closing price
+    # Note: We removed 'df = df["Close"]' from here because 
+    # download_sp500_data now handles that extraction already.
+    
+    # If the input is a Series (which it should be), convert to DataFrame
+    if isinstance(df, pd.Series):
+        df = df.to_frame()
+        
     df = df.reset_index()  # date no longer the index
-    df.columns = ["date", "close"]  # rename columns (one of them being the date)
+    df.columns = ["date", "close"]  # rename columns
     return df
+
 
 def add_ath_column(df):
     df["is_ath"] = df["close"] == df["close"].cummax()
