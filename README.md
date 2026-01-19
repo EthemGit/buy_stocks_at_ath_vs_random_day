@@ -8,7 +8,7 @@ This project uses historical data (1950–Present) to quantitatively test that f
 2. **The Random Buyer:** Buys on any given day regardless of price action.
 
 ## 📊 Results Preview
-C:\Users\ethem\Desktop\projects\buy_stocks_ath_vs_random\plots\1y_return_dist.png
+![image alt](https://github.com/EthemGit/buy_stocks_at_ath_vs_random_day/blob/08d7acb8426ff5591b35126559fcfdb3244ee2ba/plots/1y_return_dist.png)
 
 > **Key Finding:** Historically, buying at an ATH yielded slightly higher average returns than buying randomly.
 
